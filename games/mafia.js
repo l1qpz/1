@@ -1,23 +1,27 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
 
 module.exports = async function(message) {
   const players = new Set();
-  const maxPlayers = 15;
+  const maxPlayers = 50;
 
-  const attachment = new AttachmentBuilder('https://cdn.discordapp.com/attachments/1552241868241240175/1563809455269875733/BDF88FE8-7B9A-46A9-A1FA-3E8DD7706FA0.png', { name: 'mafia.png' });
+  const embed = new EmbedBuilder()
+    .setColor('#2C2F33')
+    .setTitle('مافيا')
+    .setDescription('لعبة مافيا - البداية خلال 30 ثانية\n(تتطلب أكثر من 4 أشخاص للبدء):')
+    .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809455269875733/BDF88FE8-7B9A-46A9-A1FA-3E8DD7706FA0.png');
   
   const row = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('m_join').setLabel('انضمام (0/15)').setStyle(ButtonStyle.Danger),
+    new ButtonBuilder().setCustomId('m_join').setLabel('انضمام (0/50)').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId('m_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
   );
 
   const gameMessage = await message.channel.send({ 
-    content: "لعبة مافيا - البداية خلال 5 ثوانٍ:", 
-    files: [attachment], 
+    embeds: [embed], 
     components: [row] 
   });
 
-  const collector = gameMessage.createMessageComponentCollector({ time: 5000 });
+  // مؤقت لمدة 30 ثانية
+  const collector = gameMessage.createMessageComponentCollector({ time: 30000 });
 
   collector.on('collect', async i => {
     if (i.customId === 'm_join') {
@@ -39,9 +43,23 @@ module.exports = async function(message) {
 
   collector.on('end', async () => {
     if (players.size <= 4) {
-      await gameMessage.edit({ content: `انتهى الوقت. عدد اللاعبين غير كافٍ (يحتاج أكثر من 4، والعدد الحالي: ${players.size}). ملغاة.`, components: [] });
+      const expiredEmbed = new EmbedBuilder()
+        .setColor('#2C2F33')
+        .setTitle('مافيا - ملغاة')
+        .setDescription(`انتهى الوقت (30 ثانية). عدد اللاعبين غير كافٍ (يحتاج أكثر من 4، والعدد الحالي: ${players.size}). تم إلغاء اللعبة.`)
+        .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809455269875733/BDF88FE8-7B9A-46A9-A1FA-3E8DD7706FA0.png');
+      return gameMessage.edit({ embeds: [expiredEmbed], components: [] });
     } else {
-      await gameMessage.edit({ content: `بدأت لعبة المافيا! عدد المشاركين: ${players.size}. تم توزيع الأدوار!`, components: [] });
+      const playersArr = Array.from(players);
+      const mafia = playersArr[Math.floor(Math.random() * playersArr.length)];
+      
+      const startEmbed = new EmbedBuilder()
+        .setColor('#2C2F33')
+        .setTitle('مافيا - بدأت اللعبة')
+        .setDescription(`بدأت لعبة المافيا! عدد المشاركين: ${players.size}. تم توزيع الأدوار!`)
+        .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809455269875733/BDF88FE8-7B9A-46A9-A1FA-3E8DD7706FA0.png');
+
+      await gameMessage.edit({ embeds: [startEmbed], components: [] });
     }
   });
 };
