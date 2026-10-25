@@ -2,7 +2,7 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('
 const { getUserData } = require('./points');
 
 module.exports = async function(message) {
-  const players = new Map(); // تخزين معلومات اللاعبين (id, member, username)
+  const players = new Map();
   const maxPlayers = 15;
 
   const embed = new EmbedBuilder()
@@ -32,16 +32,44 @@ module.exports = async function(message) {
   collector.on('collect', async i => {
     const uData = getUserData(i.user.id);
 
+    // زر فتح المتجر التفاعلي بأزرار الشراء
     if (i.customId === 'm_shop') {
-      return i.reply({
-        content: 
-          '**متجر خصائص المافيا:**\n' +
-          '1. كاشف الهوية (700 نقطة) - `-شراء مافيا كاشف`\n' +
-          '2. الحماية الليلية (800 نقطة) - `-شراء مافيا الحماية`\n' +
-          '3. الهروب (900 نقطة) - `-شراء مافيا الهروب`\n' +
-          '4. الدليل السري (600 نقطة) - `-شراء مافيا الدليل`',
-        ephemeral: true
-      });
+      const shopEmbed = new EmbedBuilder()
+        .setColor('#8B0000')
+        .setTitle('متجر خصائص المافيا')
+        .setDescription('اختر الأداة التي تريد شراءها مباشرة (تخصم من نقاطك):');
+
+      const shopRow1 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('buy_detector').setLabel('كاشف الهوية (700)').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('buy_nightshield').setLabel('الحماية الليلية (800)').setStyle(ButtonStyle.Success)
+      );
+
+      const shopRow2 = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('buy_escape').setLabel('الهروب (900)').setStyle(ButtonStyle.Success),
+        new ButtonBuilder().setCustomId('buy_secretguide').setLabel('الدليل السري (600)').setStyle(ButtonStyle.Success)
+      );
+
+      return i.reply({ embeds: [shopEmbed], components: [shopRow1, shopRow2], ephemeral: true });
+    }
+
+    // عمليات الشراء الفوري عبر الأزرار
+    if (i.customId.startsWith('buy_')) {
+      let itemKey = '';
+      let itemName = '';
+      let price = 0;
+
+      if (i.customId === 'buy_detector') { itemKey = 'mafiaDetector'; itemName = 'كاشف الهوية'; price = 700; }
+      else if (i.customId === 'buy_nightshield') { itemKey = 'nightShield'; itemName = 'الحماية الليلية'; price = 800; }
+      else if (i.customId === 'buy_escape') { itemKey = 'escape'; itemName = 'الهروب'; price = 900; }
+      else if (i.customId === 'buy_secretguide') { itemKey = 'secretGuide'; itemName = 'الدليل السري'; price = 600; }
+
+      if (uData.points >= price) {
+        uData.points -= price;
+        uData.inventory[itemKey] += 1;
+        return i.reply({ content: `تم شراء (${itemName}) بنجاح! تم خصم ${price} نقطة وإضافتها لحقيبتك.`, ephemeral: true });
+      } else {
+        return i.reply({ content: `رصيدك غير كافي! تحتاج إلى ${price} نقطة (رصيدك: ${uData.points}).`, ephemeral: true });
+      }
     }
 
     if (i.customId === 'm_bag') {
@@ -91,20 +119,13 @@ module.exports = async function(message) {
       return gameMessage.edit({ embeds: [expiredEmbed], components: [] });
     }
 
-    // توزيع الأدوار عشوائياً (قرعة)
     const playerArray = Array.from(players.values());
-    
-    // تحديد الأدوار بناءً على عدد اللاعبين
-    // 1 مافيا، 1 طبيب، 1 محقق، والباقي مواطنون
     const roles = ['مافيا', 'طبيب', 'محقق'];
     while (roles.length < playerArray.length) {
       roles.push('مواطن');
     }
-
-    // خلط الأدوار عشوائياً
     roles.sort(() => Math.random() - 0.5);
 
-    // إرسال رسالة خاصة لكل لاعب بدوره
     for (let i = 0; i < playerArray.length; i++) {
       const p = playerArray[i];
       const assignedRole = roles[i];
@@ -118,7 +139,7 @@ module.exports = async function(message) {
     const startEmbed = new EmbedBuilder()
       .setColor('#8B0000')
       .setTitle('مافيا - بدأت اللعبة')
-      .setDescription(`بدأت لعبة المافيا! عدد المشاركين: ${playerArray.length}.\nتم إرسال الأدوار (طبيب، محقق، مافيا، مواطنون) في رسائل خاصة لكل لاعب عبر القرعة العشوائية!`)
+      .setDescription(`بدأت لعبة المافيا! عدد المشاركين: ${playerArray.length}.\nتم إرسال الأدوار (طبيب، محقق، مافيا، مواطنون) في رسائل خاصة عبر القرعة العشوائية!`)
       .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809455269875733/BDF88FE8-7B9A-46A9-A1FA-3E8DD7706FA0.png');
 
     await gameMessage.edit({ embeds: [startEmbed], components: [] });
