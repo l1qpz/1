@@ -11,32 +11,55 @@ function getUserData(userId) {
       rank: 191, 
       gamesPoints: { 'روليت': 0, 'مافيا': 0, 'نرد': 0, 'اعلام': 0, 'اسرع': 0, 'حسم': 0 },
       groupGames: 0,
-      shield: false
+      shield: false,
+      reviveItem: 0, // أداة الإنعاش
+      // الإحصائيات الجديدة المطلوبة للروليت
+      rouletteStats: {
+        wins: 0,
+        purchasePoints: 0, // النقاط المستهلكة في الشراء
+        leftCount: 0,     // كم مرة انسحب
+        kickedCount: 0    // كم مرة انطرد
+      }
     };
   }
   return usersData[userId];
 }
 
-module.exports = async function(message, command, args) {
+module.exports = { getUserData, async function(message, command, args) {
   const userId = message.author.id;
   const data = getUserData(userId);
 
   if (command === '-متجر') {
     return message.reply(
       "--- متجر خصائص السيرفر ---\n\n" +
-      "1 - درع حماية النقاط (السعر: 100 نقطة)\n" +
-      "الحالة الحالية: " + (data.shield ? "مفعل" : "غير مفعل") + "\n\n" +
-      "لشراء الدرع، اكتب: -شراء درع"
+      "1 - درع حماية (السعر: 100 نقطة) - يحميك من الطرد\n" +
+      "2 - أداة إنعاش (السعور: 150 نقطة) - تعيدك بعد الطرد\n\n" +
+      "الحالة:\n" +
+      "- درع الحماية: " + (data.shield ? "مفعل" : "غير مفعل") + "\n" +
+      "- أدوات الإنعاش المتوفرة: " + data.reviveItem + "\n\n" +
+      "ل الشراء، اكتب: -شراء درع أو -شراء إنعاش"
     );
   }
 
-  if (command === '-شراء' && args[1] === 'درع') {
-    if (data.points >= 100) {
-      data.points -= 100;
-      data.shield = true;
-      return message.reply("تم شراء درع الحماية بنجاح!");
-    } else {
-      return message.reply("رصيدك غير كافي لشراء درع الحماية (يحتاج 100 نقطة).");
+  if (command === '-شراء') {
+    if (args[1] === 'درع') {
+      if (data.points >= 100) {
+        data.points -= 100;
+        data.shield = true;
+        data.rouletteStats.purchasePoints += 100;
+        return message.reply("تم شراء درع الحماية بنجاح!");
+      } else {
+        return message.reply("رصيدك غير كافي لشراء الدرع (يحتاج 100 نقطة).");
+      }
+    } else if (args[1] === 'إنعاش') {
+      if (data.points >= 150) {
+        data.points -= 150;
+        data.reviveItem += 1;
+        data.rouletteStats.purchasePoints += 150;
+        return message.reply("تم شراء أداة الإنعاش بنجاح!");
+      } else {
+        return message.reply("رصيدك غير كافي لشراء أداة الإنعاش (يحتاج 150 نقطة).");
+      }
     }
   }
 
@@ -91,4 +114,15 @@ module.exports = async function(message, command, args) {
       return message.reply('حدث خطأ أثناء إنشاء بطاقة النقاط.');
     }
   }
-};
+
+  // عرض إحصائيات الروليت التفصيلية
+  if (command === '-احصائيات-روليت') {
+    return message.reply(
+      `--- إحصائيات الروليت الخاصة بك ---\n` +
+      `- عدد مرات الفوز: ${data.rouletteStats.wins}\n` +
+      `- نقاط الشراء المستهلكة: ${data.rouletteStats.purchasePoints}\n` +
+      `- عدد مرات الانسحاب: ${data.rouletteStats.leftCount}\n` +
+      `- عدد مرات الطرد: ${data.rouletteStats.kickedCount}`
+    );
+  }
+}};
