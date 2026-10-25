@@ -6,19 +6,24 @@ const usersData = {};
 function getUserData(userId) {
   if (!usersData[userId]) {
     usersData[userId] = {
-      points: 0,          
+      points: 2000,          
       weeklyPoints: 0,     
       rank: 191, 
       gamesPoints: { 'روليت': 0, 'مافيا': 0, 'نرد': 0, 'اعلام': 0, 'اسرع': 0, 'حسم': 0 },
       groupGames: 0,
-      shield: false,
-      reviveItem: 0,
-      rouletteStats: {
-        wins: 0,
-        purchasePoints: 0,
-        leftCount: 0,
-        kickedCount: 0
-      }
+      inventory: {
+        revive: 0,       // الإنعاش
+        shield: 0,       // درع الحماية
+        extraLuck: 0,    // الحظ الإضافي
+        retry: 0,        // إعادة المحاولة
+        stealth: 0,      // التخفي
+        survivalKey: 0,  // مفتاح النجاة
+        mafiaDetector: 0,// كاشف الهوية
+        nightShield: 0,  // الحماية الليلية
+        escape: 0,       // الهروب
+        secretGuide: 0   // الدليل السري
+      },
+      rouletteStats: { wins: 0, purchasePoints: 0, leftCount: 0, kickedCount: 0 }
     };
   }
   return usersData[userId];
@@ -28,50 +33,59 @@ async function handlePoints(message, command, args) {
   const userId = message.author.id;
   const data = getUserData(userId);
 
-  if (command === '-متجر') {
-    const embed = new EmbedBuilder()
-      .setColor('#2C2F33')
-      .setTitle('متجر خصائص السيرفر')
-      .setDescription(
-        '1 - درع حماية (السعر: 100 نقطة) - يحميك من الطرد\n' +
-        '2 - أداة إنعاش (السعر: 150 نقطة) - تعيدك بعد الطرد\n\n' +
-        'للشراء، اكتب:\n' +
-        '-شراء درع\n' +
-        '-شراء إنعاش'
-      );
-    return message.reply({ embeds: [embed] });
-  }
-
   if (command === '-الحقيبة') {
     const embed = new EmbedBuilder()
-      .setColor('#2C2F33')
-      .setTitle('حقيبتك الشخصية')
+      .setColor('#8B0000')
+      .setTitle('حقيبتك الشخصية (المخزون)')
       .setDescription(
-        `درع الحماية: ${data.shield ? 'مفعل' : 'غير مفعل'}\n` +
-        `أدوات الإنعاش المتوفرة: ${data.reviveItem}`
+        '**خصائص الروليت:**\n' +
+        `- الإنعاش: ${data.inventory.revive}\n` +
+        `- درع الحماية: ${data.inventory.shield}\n` +
+        `- الحظ الإضافي: ${data.inventory.extraLuck}\n` +
+        `- إعادة المحاولة: ${data.inventory.retry}\n` +
+        `- التخفي: ${data.inventory.stealth}\n` +
+        `- مفتاح النجاة: ${data.inventory.survivalKey}\n\n` +
+        '**خصائص المافيا:**\n' +
+        `- كاشف الهوية: ${data.inventory.mafiaDetector}\n` +
+        `- الحماية الليلية: ${data.inventory.nightShield}\n` +
+        `- الهروب: ${data.inventory.escape}\n` +
+        `- الدليل السري: ${data.inventory.secretGuide}`
       );
     return message.reply({ embeds: [embed] });
   }
 
   if (command === '-شراء') {
-    if (args[1] === 'درع') {
-      if (data.points >= 100) {
-        data.points -= 100;
-        data.shield = true;
-        data.rouletteStats.purchasePoints += 100;
-        return message.reply("تم شراء درع الحماية بنجاح!");
-      } else {
-        return message.reply("رصيدك غير كافي لشراء الدرع (يحتاج 100 نقطة).");
-      }
-    } else if (args[1] === 'إنعاش') {
-      if (data.points >= 150) {
-        data.points -= 150;
-        data.reviveItem += 1;
-        data.rouletteStats.purchasePoints += 150;
-        return message.reply("تم شراء أداة الإنعاش بنجاح!");
-      } else {
-        return message.reply("رصيدك غير كافي لشراء أداة الإنعاش (يحتاج 150 نقطة).");
-      }
+    const category = args[1]; 
+    const item = args[2];     
+
+    let price = 0;
+    let key = '';
+
+    if (category === 'روليت') {
+      if (item === 'إنعاش') { price = 500; key = 'revive'; }
+      else if (item === 'درع') { price = 700; key = 'shield'; }
+      else if (item === 'الحظ') { price = 600; key = 'extraLuck'; }
+      else if (item === 'إعادة') { price = 800; key = 'retry'; }
+      else if (item === 'التخفي') { price = 900; key = 'stealth'; }
+      else if (item === 'مفتاح') { price = 1000; key = 'survivalKey'; }
+    } else if (category === 'مافيا') {
+      if (item === 'كاشف') { price = 700; key = 'mafiaDetector'; }
+      else if (item === 'الحماية') { price = 800; key = 'nightShield'; }
+      else if (item === 'الهروب') { price = 900; key = 'escape'; }
+      else if (item === 'الدليل') { price = 600; key = 'secretGuide'; }
+    }
+
+    if (!price || !key) {
+      return message.reply("يرجى تحديد القسم والأداة بشكل صحيح. مثال: `-شراء روليت درع`");
+    }
+
+    if (data.points >= price) {
+      data.points -= price;
+      data.inventory[key] += 1;
+      data.rouletteStats.purchasePoints += price;
+      return message.reply(`تم شراء أداة (${item}) بنجاح وإضافتها إلى حقيبتك!`);
+    } else {
+      return message.reply(`رصيدك غير كافي لشراء هذه الأداة (تحتاج إلى ${price} نقطة).`);
     }
   }
 
