@@ -1,38 +1,40 @@
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, StringSelectMenuBuilder } = require('discord.js');
 const { getUserData } = require('./points');
 
 module.exports = async function(message) {
-  const players = new Map(); // تخزين المستخدمين ومعلوماتهم
+  const players = new Map();
   const maxPlayers = 50;
 
-  const attachment = new AttachmentBuilder('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png', { name: 'roulette.png' });
-  
-  // الصف الأول: أزرار الانضمام والانسحاب
+  const embed = new EmbedBuilder()
+    .setColor('#8B0000')
+    .setTitle('روليت')
+    .setDescription('لعبة روليت - البداية خلال 30 ثانية\nاضغط على زر الانضمام للمشاركة:')
+    .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png');
+
+  // أزرار الانضمام والانسحاب بدون إيموجيات
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('r_join').setLabel('انضمام (0/50)').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('r_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
   );
 
-  // الصف الثاني: زر الإحصائيات الخاص باللاعب
+  // زر الإحصائيات فقط بدون متجر
   const row2 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('r_stats').setLabel('إحصائياتي').setStyle(ButtonStyle.Primary)
   );
 
   const gameMessage = await message.channel.send({ 
-    content: "لعبة روليت - البداية خلال 5 ثوانٍ (الحد الأقصى 50 لاعباً):", 
-    files: [attachment], 
+    embeds: [embed], 
     components: [row1, row2] 
   });
 
-  const collector = gameMessage.createMessageComponentCollector({ time: 5000 });
+  const collector = gameMessage.createMessageComponentCollector({ time: 30000 });
 
   collector.on('collect', async i => {
     const uData = getUserData(i.user.id);
     
-    // عند ضغط زر الإحصائيات
     if (i.customId === 'r_stats') {
       return i.reply({
-        content: `--- إحصائيات الروليت الخاصة بك ---\n` +
+        content: `إحصائيات الروليت الخاصة بك:\n` +
                  `- عدد مرات الفوز: ${uData.rouletteStats.wins}\n` +
                  `- نقاط الشراء المستهلكة: ${uData.rouletteStats.purchasePoints}\n` +
                  `- عدد مرات الانسحاب: ${uData.rouletteStats.leftCount}\n` +
@@ -53,7 +55,7 @@ module.exports = async function(message) {
     } else if (i.customId === 'r_leave') {
       if (players.has(i.user.id)) {
         players.delete(i.user.id);
-        uData.rouletteStats.leftCount += 1; // تسجيل الانسحاب في الإحصائيات
+        uData.rouletteStats.leftCount += 1;
         const updatedRow1 = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId('r_join').setLabel(`انضمام (${players.size}/${maxPlayers})`).setStyle(ButtonStyle.Secondary),
           new ButtonBuilder().setCustomId('r_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
@@ -67,12 +69,23 @@ module.exports = async function(message) {
 
   collector.on('end', async () => {
     if (players.size < 3) {
-      return gameMessage.edit({ content: `انتهى الوقت. لم يكتمل العدد المطلوب (العدد الحالي: ${players.size} من 3). ملغاة.`, components: [] });
+      const expiredEmbed = new EmbedBuilder()
+        .setColor('#8B0000')
+        .setTitle('روليت - ملغاة')
+        .setDescription(`انتهى الوقت. لم يكتمل العدد المطلوب (العدد الحالي: ${players.size} من 3).`)
+        .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png');
+      return gameMessage.edit({ embeds: [expiredEmbed], components: [] });
     }
 
     let activePlayers = Array.from(players.values());
     
-    await gameMessage.edit({ content: `بدأت العجلة بالدوران! تم تسجيل ${activePlayers.length} مشاركاً. تنطلق جولات الطرد والاحتمالات...`, components: [] });
+    const startEmbed = new EmbedBuilder()
+      .setColor('#8B0000')
+      .setTitle('روليت - بدأت اللعبة')
+      .setDescription(`بدأت العجلة بالدوران! تم تسجيل ${activePlayers.length} مشاركاً. تنطلق جولات الطرد...`)
+      .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png');
+
+    await gameMessage.edit({ embeds: [startEmbed], components: [] });
 
     while (activePlayers.length > 1) {
       const chosenIndex = Math.floor(Math.random() * activePlayers.length);
@@ -138,7 +151,7 @@ module.exports = async function(message) {
       wData.points += 100;
       wData.gamesPoints['روليت'] += 100;
 
-      await message.channel.send(`انتهت اللعبة! الفائز الأخير في الروليت هو **${winner.username}** وحصل على جائزة 100 نقطة وتسجيل فوز جديد في إحصائياته!`);
+      await message.channel.send(`انتهت اللعبة! الفائز الأخير في الروليت هو **${winner.username}** وحصل على جائزة 100 نقطة!`);
     }
   });
 };
