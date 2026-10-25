@@ -7,39 +7,58 @@ module.exports = async function(message) {
 
   const attachment = new AttachmentBuilder('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png', { name: 'roulette.png' });
   
-  const row = new ActionRowBuilder().addComponents(
+  // الصف الأول: أزرار الانضمام والانسحاب
+  const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('r_join').setLabel('انضمام (0/50)').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('r_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
+  );
+
+  // الصف الثاني: زر الإحصائيات الخاص باللاعب
+  const row2 = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('r_stats').setLabel('إحصائياتي').setStyle(ButtonStyle.Primary)
   );
 
   const gameMessage = await message.channel.send({ 
     content: "لعبة روليت - البداية خلال 5 ثوانٍ (الحد الأقصى 50 لاعباً):", 
     files: [attachment], 
-    components: [row] 
+    components: [row1, row2] 
   });
 
   const collector = gameMessage.createMessageComponentCollector({ time: 5000 });
 
   collector.on('collect', async i => {
     const uData = getUserData(i.user.id);
+    
+    // عند ضغط زر الإحصائيات
+    if (i.customId === 'r_stats') {
+      return i.reply({
+        content: `--- إحصائيات الروليت الخاصة بك ---\n` +
+                 `- عدد مرات الفوز: ${uData.rouletteStats.wins}\n` +
+                 `- نقاط الشراء المستهلكة: ${uData.rouletteStats.purchasePoints}\n` +
+                 `- عدد مرات الانسحاب: ${uData.rouletteStats.leftCount}\n` +
+                 `- عدد مرات الطرد: ${uData.rouletteStats.kickedCount}`,
+        ephemeral: true
+      });
+    }
+
     if (i.customId === 'r_join') {
       if (players.size >= maxPlayers) return i.reply({ content: 'اكتمل العدد الأقصى (50 لاعباً)!', ephemeral: true });
       players.set(i.user.id, { username: i.user.username, member: i.member });
       
-      const updatedRow = new ActionRowBuilder().addComponents(
+      const updatedRow1 = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId('r_join').setLabel(`انضمام (${players.size}/${maxPlayers})`).setStyle(ButtonStyle.Secondary),
         new ButtonBuilder().setCustomId('r_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
       );
-      await i.update({ components: [updatedRow] });
+      await i.update({ components: [updatedRow1, row2] });
     } else if (i.customId === 'r_leave') {
       if (players.has(i.user.id)) {
         players.delete(i.user.id);
         uData.rouletteStats.leftCount += 1; // تسجيل الانسحاب في الإحصائيات
-        const updatedRow = new ActionRowBuilder().addComponents(
+        const updatedRow1 = new ActionRowBuilder().addComponents(
           new ButtonBuilder().setCustomId('r_join').setLabel(`انضمام (${players.size}/${maxPlayers})`).setStyle(ButtonStyle.Secondary),
           new ButtonBuilder().setCustomId('r_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
         );
-        await i.update({ components: [updatedRow] });
+        await i.update({ components: [updatedRow1, row2] });
       } else {
         i.reply({ content: 'أنت لست منضماً أصلاً!', ephemeral: true });
       }
@@ -53,18 +72,14 @@ module.exports = async function(message) {
 
     let activePlayers = Array.from(players.values());
     
-    // محاكات دوران العجلة وجولات الطرد
     await gameMessage.edit({ content: `بدأت العجلة بالدوران! تم تسجيل ${activePlayers.length} مشاركاً. تنطلق جولات الطرد والاحتمالات...`, components: [] });
 
-    // حلقة اللعبة حتى يبقى شخص واحد أو ينتهي التنافس
     while (activePlayers.length > 1) {
-      // اختيار لاعب عشوائي بواسطة "العجلة"
       const chosenIndex = Math.floor(Math.random() * activePlayers.length);
       const chosenPlayer = activePlayers[chosenIndex];
 
       await message.channel.send(`العجلة اختارت اللاعب: **${chosenPlayer.username}**! لديه صلاحية طرد لاعب آخر.`);
 
-      // إنشاء قائمة منسقة بأسماء اللاعبين الآخرين ليختار من يطرده
       const targets = activePlayers.filter(p => p.username !== chosenPlayer.username);
       if (targets.length === 0) break;
 
@@ -88,21 +103,18 @@ module.exports = async function(message) {
 
         await selection.update({ content: `تم اختيار **${targetName}** لطرده!`, components: [] });
 
-        // فحص درع الحماية أو الإنعاش
         if (targetData.shield) {
-          targetData.shield = false; // استهلاك الدرع
+          targetData.shield = false;
           await message.channel.send(`انقذ درع الحماية اللاعب **${targetName}** ولم يتم طرده!`);
         } else if (targetData.reviveItem > 0) {
-          targetData.reviveItem -= 1; // استهلاك أداة الإنعاش
+          targetData.reviveItem -= 1;
           await message.channel.send(`تم طرد اللاعب **${targetName}**، لكنه استخدم أداة الإنعاش وعاد للعبة!`);
         } else {
-          // طرد حقيقي وتسجيله في الإحصائيات
           targetData.rouletteStats.kickedCount += 1;
           activePlayers = activePlayers.filter(p => p.username !== targetName);
           await message.channel.send(`تم طرد اللاعب **${targetName}** بنجاح من العجلة!`);
         }
       } catch (err) {
-        // لو انتهى الوقت ولم يختار، يتم طرد لاعب عشوائي تلقائياً
         const randomTarget = targets[Math.floor(Math.random() * targets.length)];
         const tData = getUserData(randomTarget.member.id);
         
@@ -116,15 +128,13 @@ module.exports = async function(message) {
         }
       }
 
-      // مهلة بسيطة بين الجولات
       await new Promise(res => setTimeout(res, 3000));
     }
 
-    // إعلان الفائز النهائي
     if (activePlayers.length === 1) {
       const winner = activePlayers[0];
       const wData = getUserData(winner.member.id);
-      wData.rouletteStats.wins += 1; // تسجيل الفوز في الإحصائيات
+      wData.rouletteStats.wins += 1;
       wData.points += 100;
       wData.gamesPoints['روليت'] += 100;
 
