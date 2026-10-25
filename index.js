@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 const http = require('http');
 
 // خادم ويب لإرضاء شروط Render
@@ -15,7 +15,7 @@ const client = new Client({
   ]
 });
 
-// استيراد وحدات الألعاب
+// استيراد وحدات الألعاب والأنظمة
 const { handlePoints } = require('./games/points');
 const handleRoulette = require('./games/roulette');
 const handleMafia = require('./games/mafia');
@@ -34,30 +34,34 @@ client.on('messageCreate', async message => {
   const args = message.content.trim().split(/ +/);
   const command = args[0].toLowerCase();
 
-  // قائمة الألعاب
+  // قائمة الألعاب بنظام الامبد المنسق وبدون إيموجيات
   if (command === '-العاب') {
-    return message.reply(
-      "قائمة ألعاب السيرفر\n" +
-      "مرحبًا بكم في مركز الألعاب، حيث تتوفر مجموعة متنوعة من الألعاب الجماعية والفردية. فيما يلي قائمة الألعاب والأوامر المخصصة لتشغيلها\n\n" +
-      "[ الألعاب الجماعية ]\n" +
-      "-روليت : لعبة الروليت\n" +
-      "-مافيا : لعبة المافيا\n" +
-      "-نرد : تحدي النرد الجماعي بين الفريقين\n\n" +
-      "[ الألعاب الفردية ]\n" +
-      "-اسرع : تحدي سرعة الكتابة\n" +
-      "-اعلام : تحدي معرفة أعلام الدول\n" +
-      "-حسم : تحدي حسم السريع ضد البوت\n\n" +
-      "[ الأنظمة والإحصائيات ]\n" +
-      "-نقاطي : عرض بطاقة النقاط والإحصائيات\n\n" +
-      "آلية الاستخدام:\n" +
-      "لتشغيل أي لعبة، يرجى كتابة الأمر المخصص لها في القناة المناسبة"
-    );
+    const embed = new EmbedBuilder()
+      .setColor('#2C2F33')
+      .setTitle('قائمة ألعاب السيرفر')
+      .setDescription(
+        'مرحبًا بكم في مركز الألعاب، حيث تتوفر مجموعة متنوعة من الألعاب الجماعية والفردية. فيما يلي قائمة الألعاب والأوامر المخصصة لتشغيلها\n\n' +
+        '[ الألعاب الجماعية ]\n' +
+        '-روليت : لعبة الروليت\n' +
+        '-مافيا : لعبة المافيا\n' +
+        '-نرد : تحدي النرد الجماعي بين الفريقين\n\n' +
+        '[ الألعاب الفردية ]\n' +
+        '-اسرع : تحدي سرعة الكتابة\n' +
+        '-اعلام : تحدي معرفة أعلام الدول\n' +
+        '-حسم : تحدي حسم السريع ضد البوت\n\n' +
+        '[ الأنظمة والإحصائيات ]\n' +
+        '-نقاطي : عرض بطاقة النقاط والإحصائيات\n\n' +
+        'آلية الاستخدام:\n' +
+        'لتشغيل أي لعبة، يرجى كتابة الأمر المخصص لها في القناة المناسبة'
+      );
+    return message.reply({ embeds: [embed] });
   }
 
-  // توجيه الأوامر لملفاتها
-  if (command === '-نقاطي') {
+  // توجيه أوامر النقاط والمتجر والحقيبة والشراء لملف points.js
+  if (command === '-نقاطي' || command === '-متجر' || command === '-الحقيبة' || (command === '-شراء' && args[1])) {
     return handlePoints(message, command, args);
   }
+
   if (command === '-روليت') return handleRoulette(message);
   if (command === '-مافيا') return handleMafia(message);
   if (command === '-نرد') return handleDice(message);
