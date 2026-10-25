@@ -11,15 +11,15 @@ module.exports = async function(message) {
     .setDescription('لعبة روليت - البداية خلال 30 ثانية\nاضغط على زر الانضمام للمشاركة:')
     .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png');
 
-  // أزرار الانضمام والانسحاب بدون إيموجيات
   const row1 = new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('r_join').setLabel('انضمام (0/50)').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder().setCustomId('r_leave').setLabel('انسحاب').setStyle(ButtonStyle.Secondary)
   );
 
-  // زر الإحصائيات فقط بدون متجر
   const row2 = new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId('r_stats').setLabel('إحصائياتي').setStyle(ButtonStyle.Primary)
+    new ButtonBuilder().setCustomId('r_shop').setLabel('متجر الخصائص').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('r_bag').setLabel('الحقيبة').setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder().setCustomId('r_stats').setLabel('إحصائيات').setStyle(ButtonStyle.Primary)
   );
 
   const gameMessage = await message.channel.send({ 
@@ -27,6 +27,7 @@ module.exports = async function(message) {
     components: [row1, row2] 
   });
 
+  // مؤقت لمدة 30 ثانية
   const collector = gameMessage.createMessageComponentCollector({ time: 30000 });
 
   collector.on('collect', async i => {
@@ -39,6 +40,20 @@ module.exports = async function(message) {
                  `- نقاط الشراء المستهلكة: ${uData.rouletteStats.purchasePoints}\n` +
                  `- عدد مرات الانسحاب: ${uData.rouletteStats.leftCount}\n` +
                  `- عدد مرات الطرد: ${uData.rouletteStats.kickedCount}`,
+        ephemeral: true
+      });
+    }
+
+    if (i.customId === 'r_shop') {
+      return i.reply({
+        content: `متجر الخصائص:\n1 - درع حماية (100 نقطة)\n2 - أداة إنعاش (150 نقطة)\nاكتب -متجر أو -شراء درع للشراء.`,
+        ephemeral: true
+      });
+    }
+
+    if (i.customId === 'r_bag') {
+      return i.reply({
+        content: `حقيبتك:\n- درع الحماية: ${uData.shield ? 'مفعل' : 'غير مفعل'}\n- أدوات الإنعاش: ${uData.reviveItem}`,
         ephemeral: true
       });
     }
@@ -72,7 +87,7 @@ module.exports = async function(message) {
       const expiredEmbed = new EmbedBuilder()
         .setColor('#8B0000')
         .setTitle('روليت - ملغاة')
-        .setDescription(`انتهى الوقت. لم يكتمل العدد المطلوب (العدد الحالي: ${players.size} من 3).`)
+        .setDescription(`انتهى الوقت (30 ثانية). لم يكتمل العدد المطلوب (العدد الحالي: ${players.size} من 3). تم إلغاء اللعبة.`)
         .setImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809433656762450/B17B3AD9-4C36-435D-93FC-5CB6B03FAC66.png');
       return gameMessage.edit({ embeds: [expiredEmbed], components: [] });
     }
