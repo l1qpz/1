@@ -27,39 +27,41 @@ module.exports = async function(message) {
     components: [row1, row2] 
   });
 
-  // مؤقت لمدة 30 ثانية
   const collector = gameMessage.createMessageComponentCollector({ time: 30000 });
 
   collector.on('collect', async i => {
     const uData = getUserData(i.user.id);
     
-    if (i.customId === 'r_stats') {
-      return i.reply({
-        content: `إحصائيات الروليت الخاصة بك:\n` +
-                 `- عدد مرات الفوز: ${uData.rouletteStats.wins}\n` +
-                 `- نقاط الشراء المستهلكة: ${uData.rouletteStats.purchasePoints}\n` +
-                 `- عدد مرات الانسحاب: ${uData.rouletteStats.leftCount}\n` +
-                 `- عدد مرات الطرد: ${uData.rouletteStats.kickedCount}`,
-        ephemeral: true
-      });
-    }
-
     if (i.customId === 'r_shop') {
       return i.reply({
-        content: `متجر الخصائص:\n1 - درع حماية (100 نقطة)\n2 - أداة إنعاش (150 نقطة)\nاكتب -متجر أو -شراء درع للشراء.`,
+        content: 
+          '**متجر خصائص الروليت:**\n' +
+          '1. الإنعاش (500 نقطة) - `-شراء روليت إنعاش`\n' +
+          '2. درع الحماية (700 نقطة) - `-شراء روليت درع`\n' +
+          '3. الحظ الإضافي (600 نقطة) - `-شراء روليت الحظ`\n' +
+          '4. إعادة المحاولة (800 نقطة) - `-شراء روليت إعادة`\n' +
+          '5. التخفي (900 نقطة) - `-شراء روليت التخفي`\n' +
+          '6. مفتاح النجاة (1000 نقطة) - `-شراء روليت مفتاح`',
         ephemeral: true
       });
     }
 
     if (i.customId === 'r_bag') {
       return i.reply({
-        content: `حقيبتك:\n- درع الحماية: ${uData.shield ? 'مفعل' : 'غير مفعل'}\n- أدوات الإنعاش: ${uData.reviveItem}`,
+        content: `حقيبتك:\n- درع الحماية: ${uData.inventory.shield}\n- الإنعاش: ${uData.inventory.revive}\n- الحظ الإضافي: ${uData.inventory.extraLuck}`,
+        ephemeral: true
+      });
+    }
+
+    if (i.customId === 'r_stats') {
+      return i.reply({
+        content: `إحصائيات الروليت:\n- مرات الفوز: ${uData.rouletteStats.wins}\n- مرات الطرد: ${uData.rouletteStats.kickedCount}`,
         ephemeral: true
       });
     }
 
     if (i.customId === 'r_join') {
-      if (players.size >= maxPlayers) return i.reply({ content: 'اكتمل العدد الأقصى (50 لاعباً)!', ephemeral: true });
+      if (players.size >= maxPlayers) return i.reply({ content: 'اكتمل العدد الأقصى!', ephemeral: true });
       players.set(i.user.id, { username: i.user.username, member: i.member });
       
       const updatedRow1 = new ActionRowBuilder().addComponents(
@@ -131,12 +133,13 @@ module.exports = async function(message) {
 
         await selection.update({ content: `تم اختيار **${targetName}** لطرده!`, components: [] });
 
-        if (targetData.shield) {
-          targetData.shield = false;
-          await message.channel.send(`انقذ درع الحماية اللاعب **${targetName}** ولم يتم طرده!`);
-        } else if (targetData.reviveItem > 0) {
-          targetData.reviveItem -= 1;
-          await message.channel.send(`تم طرد اللاعب **${targetName}**، لكنه استخدم أداة الإنعاش وعاد للعبة!`);
+        // استهلاك الأدوات تلقائياً من الحقيبة
+        if (targetData.inventory.shield > 0) {
+          targetData.inventory.shield -= 1;
+          await message.channel.send(`انقذ درع الحماية اللاعب **${targetName}** ولم يتم طرده! (تم استهلاك درع من حقيبته)`);
+        } else if (targetData.inventory.revive > 0) {
+          targetData.inventory.revive -= 1;
+          await message.channel.send(`تم طرد اللاعب **${targetName}**، لكنه استهلك أداة الإنعاش من حقيبته وعاد للعبة!`);
         } else {
           targetData.rouletteStats.kickedCount += 1;
           activePlayers = activePlayers.filter(p => p.username !== targetName);
@@ -146,8 +149,8 @@ module.exports = async function(message) {
         const randomTarget = targets[Math.floor(Math.random() * targets.length)];
         const tData = getUserData(randomTarget.member.id);
         
-        if (tData.shield) {
-          tData.shield = false;
+        if (tData.inventory.shield > 0) {
+          tData.inventory.shield -= 1;
           await message.channel.send(`انتهى الوقت! درع الحماية حمى **${randomTarget.username}** من الطرد التلقائي.`);
         } else {
           tData.rouletteStats.kickedCount += 1;
