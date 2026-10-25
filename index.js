@@ -34,7 +34,8 @@ client.on('messageCreate', async message => {
   const args = message.content.trim().split(/ +/);
   const command = args[0].toLowerCase();
 
-  // قائمة   if (command === '-العاب') {
+  // قائمة الألعاب
+  if (command === '-العاب') {
     return message.reply(
       "قائمة ألعاب السيرفر\n" +
       "مرحبًا بكم في مركز الألعاب، حيث تتوفر مجموعة متنوعة من الألعاب الجماعية والفردية. فيما يلي قائمة الألعاب والأوامر المخصصة لتشغيلها\n\n" +
@@ -53,13 +54,8 @@ client.on('messageCreate', async message => {
     );
   }
 
-  if (command === '-نقاطي') {
-    return handlePoints(message, command, args);
-  }
-
-
   // توجيه الأوامر لملفاتها
-  if (command === '-نقاطي' || command === '-متجر' || (command === '-شراء' && args[1] === 'درع')) {
+  if (command === '-نقاطي') {
     return handlePoints(message, command, args);
   }
   if (command === '-روليت') return handleRoulette(message);
