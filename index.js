@@ -16,7 +16,7 @@ const client = new Client({
 });
 
 // استيراد وحدات الألعاب
-const handlePoints = require('./games/points');
+const { handlePoints } = require('./games/points');
 const handleRoulette = require('./games/roulette');
 const handleMafia = require('./games/mafia');
 const handleDice = require('./games/dice');
