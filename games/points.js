@@ -28,40 +28,6 @@ async function handlePoints(message, command, args) {
   const userId = message.author.id;
   const data = getUserData(userId);
 
-  if (command === '-متجر') {
-    return message.reply(
-      "--- متجر خصائص السيرفر ---\n\n" +
-      "1 - درع حماية (السعر: 100 نقطة) - يحميك من الطرد\n" +
-      "2 - أداة إنعاش (السعر: 150 نقطة) - تعيدك بعد الطرد\n\n" +
-      "الحالة:\n" +
-      "- درع الحماية: " + (data.shield ? "مفعل" : "غير مفعل") + "\n" +
-      "- أدوات الإنعاش المتوفرة: " + data.reviveItem + "\n\n" +
-      "للشراء، اكتب: -شراء درع أو -شراء إنعاش"
-    );
-  }
-
-  if (command === '-شراء') {
-    if (args[1] === 'درع') {
-      if (data.points >= 100) {
-        data.points -= 100;
-        data.shield = true;
-        data.rouletteStats.purchasePoints += 100;
-        return message.reply("تم شراء درع الحماية بنجاح!");
-      } else {
-        return message.reply("رصيدك غير كافي لشراء الدرع (يحتاج 100 نقطة).");
-      }
-    } else if (args[1] === 'إنعاش') {
-      if (data.points >= 150) {
-        data.points -= 150;
-        data.reviveItem += 1;
-        data.rouletteStats.purchasePoints += 150;
-        return message.reply("تم شراء أداة الإنعاش بنجاح!");
-      } else {
-        return message.reply("رصيدك غير كافي لشراء أداة الإنعاش (يحتاج 150 نقطة).");
-      }
-    }
-  }
-
   if (command === '-نقاطي') {
     try {
       const user = message.author;
