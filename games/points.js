@@ -12,16 +12,16 @@ function getUserData(userId) {
       gamesPoints: { 'روليت': 0, 'مافيا': 0, 'نرد': 0, 'اعلام': 0, 'اسرع': 0, 'حسم': 0 },
       groupGames: 0,
       inventory: {
-        revive: 0,       // الإنعاش
-        shield: 0,       // درع الحماية
-        extraLuck: 0,    // الحظ الإضافي
-        retry: 0,        // إعادة المحاولة
-        stealth: 0,      // التخفي
-        survivalKey: 0,  // مفتاح النجاة
-        mafiaDetector: 0,// كاشف الهوية
-        nightShield: 0,  // الحماية الليلية
-        escape: 0,       // الهروب
-        secretGuide: 0   // الدليل السري
+        revive: 0,       
+        shield: 0,       
+        extraLuck: 0,    
+        retry: 0,        
+        stealth: 0,      
+        survivalKey: 0,  
+        mafiaDetector: 0,
+        nightShield: 0,  
+        escape: 0,       
+        secretGuide: 0   
       },
       rouletteStats: { wins: 0, purchasePoints: 0, leftCount: 0, kickedCount: 0 }
     };
@@ -54,47 +54,13 @@ async function handlePoints(message, command, args) {
     return message.reply({ embeds: [embed] });
   }
 
-  if (command === '-شراء') {
-    const category = args[1]; 
-    const item = args[2];     
-
-    let price = 0;
-    let key = '';
-
-    if (category === 'روليت') {
-      if (item === 'إنعاش') { price = 500; key = 'revive'; }
-      else if (item === 'درع') { price = 700; key = 'shield'; }
-      else if (item === 'الحظ') { price = 600; key = 'extraLuck'; }
-      else if (item === 'إعادة') { price = 800; key = 'retry'; }
-      else if (item === 'التخفي') { price = 900; key = 'stealth'; }
-      else if (item === 'مفتاح') { price = 1000; key = 'survivalKey'; }
-    } else if (category === 'مافيا') {
-      if (item === 'كاشف') { price = 700; key = 'mafiaDetector'; }
-      else if (item === 'الحماية') { price = 800; key = 'nightShield'; }
-      else if (item === 'الهروب') { price = 900; key = 'escape'; }
-      else if (item === 'الدليل') { price = 600; key = 'secretGuide'; }
-    }
-
-    if (!price || !key) {
-      return message.reply("يرجى تحديد القسم والأداة بشكل صحيح. مثال: `-شراء روليت درع`");
-    }
-
-    if (data.points >= price) {
-      data.points -= price;
-      data.inventory[key] += 1;
-      data.rouletteStats.purchasePoints += price;
-      return message.reply(`تم شراء أداة (${item}) بنجاح وإضافتها إلى حقيبتك!`);
-    } else {
-      return message.reply(`رصيدك غير كافي لشراء هذه الأداة (تحتاج إلى ${price} نقطة).`);
-    }
-  }
-
   if (command === '-نقاطي') {
     try {
       const user = message.author;
       const canvas = createCanvas(1000, 500);
       const ctx = canvas.getContext('2d');
 
+      // تحميل الخلفية المخصصة
       const background = await loadImage('https://cdn.discordapp.com/attachments/1552241868241240175/1563809446344392815/2E651F07-6E9C-4691-8F69-BD9334538F2E.png');
       ctx.drawImage(background, 0, 0, canvas.width, canvas.height);
 
@@ -129,15 +95,18 @@ async function handlePoints(message, command, args) {
       ctx.closePath();
       ctx.clip();
 
-      const avatar = await loadImage(user.displayAvatarURL({ extension: 'png', size: 256 }));
+      const avatarURL = user.displayAvatarURL({ extension: 'png', size: 256 });
+      const avatar = await loadImage(avatarURL);
       ctx.drawImage(avatar, 850 - 60, 120 - 60, 120, 120);
       ctx.restore();
 
-      const attachment = new AttachmentBuilder(canvas.toBuffer(), { name: 'points-card.png' });
+      // إرسال النتيجة كصورة حقيقية (ملف صورة مرفق يظهر كصورة طبيعية)
+      const attachment = new AttachmentBuilder(canvas.toBuffer('image/png'), { name: 'points-card.png' });
       return message.reply({ files: [attachment] });
-    } catch (error)  {
-      console.error(error);
-      return message.reply('حدث خطأ أثناء إنشاء بطاقة النقاط.');
+    } catch (error) {
+      console.error("Canvas Error:", error);
+      // رسالة توضيحية خفيفة في حال فشل تحميل الأصول (مثل رابط الصورة) لتتمكني من معرفة السبب بدقة
+      return message.reply("تعذر إنشاء بطاقة النقاط كصورة حالياً بسبب خطأ في تحميل خلفية البطاقة.");
     }
   }
 }
